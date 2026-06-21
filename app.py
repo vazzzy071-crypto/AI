@@ -28,20 +28,12 @@ def render_chat():
     if assistant.error:
         st.error(assistant.error)
         
-    # File uploader
-    uploaded_files = st.file_uploader(f"Fayl yuklash (Faqat rasmlar: PNG, JPG)", 
-                                      type=['png', 'jpg', 'jpeg', 'webp'],
-                                      accept_multiple_files=True,
-                                      key="uploader")
-                                      
     # Display history
     for message in st.session_state.history:
         with st.chat_message(message["role"]):
             for part in message["parts"]:
                  if isinstance(part, str):
                      st.markdown(part)
-                 else:
-                     st.info(f"Biriktirilgan fayl: {part['name']}")
 
     # Chat input
     if prompt := st.chat_input("Xabar yozing..."):
@@ -49,17 +41,15 @@ def render_chat():
         # User message
         st.session_state.history.append({
             "role": "user", 
-            "parts": [prompt] + [{"name": f.name} for f in uploaded_files]
+            "parts": [prompt]
         })
         
         with st.chat_message("user"):
             st.markdown(prompt)
-            for f in uploaded_files:
-                 st.info(f"Biriktirilgan fayl: {f.name}")
                  
         # Assistant response
         with st.chat_message("model"):
-            stream = assistant.send_message_stream(st.session_state.history[:-1], prompt, files=uploaded_files)
+            stream = assistant.send_message_stream(st.session_state.history[:-1], prompt)
             response = st.write_stream(stream)
             
         st.session_state.history.append({"role": "model", "parts": [response]})
