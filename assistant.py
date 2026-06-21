@@ -1,6 +1,6 @@
+import base64
 import mimetypes
-from google import genai
-from google.genai import types
+from groq import Groq
 
 class GeminiAssistant:
     def __init__(self, name: str, api_key: str):
@@ -12,71 +12,57 @@ class GeminiAssistant:
             self.error = f"API Key for {self.name} is missing or invalid."
         else:
             try:
-                self.client = genai.Client(api_key=self.api_key)
+                self.client = Groq(api_key=self.api_key)
                 self.error = None
             except Exception as e:
                 self.client = None
                 self.error = str(e)
-                
-    def get_chat_session(self, history_data=None):
-        """Reconstructs the chat session from Streamlit history."""
-        if self.error:
-            return None
-            
-        config = types.GenerateContentConfig(
-            temperature=0.7,
-        )
-        
-        history = []
-        if history_data:
-            for msg in history_data:
-                # We only append text parts to history for simplicity,
-                # as recreating file uploads in history can be complex
-                text_parts = [types.Part.from_text(text=p) for p in msg["parts"] if isinstance(p, str)]
-                if text_parts:
-                    history.append(types.Content(role=msg["role"], parts=text_parts))
-                
-        try:
-            return self.client.chats.create(
-                model='gemini-2.5-flash-lite',
-                config=config,
-                history=history
-            )
-        except Exception as e:
-            self.error = f"Failed to initialize chat session: {str(e)}"
-            return None
 
-    def send_message_stream(self, chat_session, prompt: str, files=None):
-        """Sends a message to the chat session and yields the response chunks."""
+    def send_message_stream(self, history_data, prompt: str, files=None):
         if self.error:
             yield f"Error: {self.error}"
             return
             
-        if not chat_session:
-             yield "Error: Chat session is not initialized."
-             return
-
-        message_parts = [prompt]
+        messages = []
+        messages.append({"role": "system", "content": "Siz foydali, aqlli yordamchisiz. Barcha savollarga o'zbek tilida to'g'ri javob berasiz."})
+        
+        for msg in history_data:
+            text_parts = [p for p in msg.get("parts", []) if isinstance(p, str)]
+            if text_parts:
+                messages.append({
+                    "role": "user" if msg["role"] == "user" else "assistant", 
+                    "content": "\n".join(text_parts)
+                })
+                
+        content = [{"type": "text", "text": prompt}]
+        
         if files:
-             for f in files:
-                 mime_type, _ = mimetypes.guess_type(f.name)
-                 if not mime_type:
-                     mime_type = "application/octet-stream"
-                 
-                 message_parts.append(
-                     types.Part.from_bytes(
-                         data=f.getvalue(),
-                         mime_type=mime_type,
-                     )
-                 )
-                 
+            for f in files:
+                mime_type, _ = mimetypes.guess_type(f.name)
+                if not mime_type:
+                    mime_type = "image/jpeg"
+                
+                if mime_type.startswith("image/"):
+                    base64_image = base64.b64encode(f.getvalue()).decode('utf-8')
+                    content.append({
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:{mime_type};base64,{base64_image}",
+                        }
+                    })
+
+        messages.append({"role": "user", "content": content})
+        
         try:
-             # The SDK handles tool calling automatically under the hood
-             response_stream = chat_session.send_message_stream(message_parts)
-             for chunk in response_stream:
-                 if chunk.text:
-                     yield chunk.text
-        except genai.errors.APIError as e:
-             yield f"\n\n**API Error:** {str(e)}"
+             stream = self.client.chat.completions.create(
+                 model='llama-3.2-90b-vision-preview',
+                 messages=messages,
+                 temperature=0.7,
+                 stream=True
+             )
+             
+             for chunk in stream:
+                 if chunk.choices[0].delta.content is not None:
+                     yield chunk.choices[0].delta.content
         except Exception as e:
-             yield f"\n\n**Error:** {str(e)}"
+             yield f"\n\n**API Error:** {str(e)}"
