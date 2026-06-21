@@ -55,7 +55,7 @@ class GeminiAssistant:
         
         try:
              stream = self.client.chat.completions.create(
-                 model='llama-3.2-90b-vision-preview',
+                 model='llama-3.2-11b-vision-preview',
                  messages=messages,
                  temperature=0.7,
                  stream=True
