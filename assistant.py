@@ -34,28 +34,11 @@ class GeminiAssistant:
                     "content": "\n".join(text_parts)
                 })
                 
-        content = [{"type": "text", "text": prompt}]
-        
-        if files:
-            for f in files:
-                mime_type, _ = mimetypes.guess_type(f.name)
-                if not mime_type:
-                    mime_type = "image/jpeg"
-                
-                if mime_type.startswith("image/"):
-                    base64_image = base64.b64encode(f.getvalue()).decode('utf-8')
-                    content.append({
-                        "type": "image_url",
-                        "image_url": {
-                            "url": f"data:{mime_type};base64,{base64_image}",
-                        }
-                    })
-
-        messages.append({"role": "user", "content": content})
+        messages.append({"role": "user", "content": prompt})
         
         try:
              stream = self.client.chat.completions.create(
-                 model='llama-3.2-11b-vision-preview',
+                 model='llama-3.3-70b-versatile',
                  messages=messages,
                  temperature=0.7,
                  stream=True
