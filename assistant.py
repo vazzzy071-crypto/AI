@@ -38,7 +38,7 @@ class GeminiAssistant:
                 
         try:
             return self.client.chats.create(
-                model='gemini-2.5-flash',
+                model='gemini-1.5-flash',
                 config=config,
                 history=history
             )
