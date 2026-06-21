@@ -1,7 +1,6 @@
 import mimetypes
 from google import genai
 from google.genai import types
-from tools import gemini_tools
 
 class GeminiAssistant:
     def __init__(self, name: str, api_key: str):
@@ -25,7 +24,6 @@ class GeminiAssistant:
             return None
             
         config = types.GenerateContentConfig(
-            tools=gemini_tools,
             temperature=0.7,
         )
         
