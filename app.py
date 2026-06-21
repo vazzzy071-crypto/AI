@@ -29,7 +29,8 @@ def render_chat():
         st.error(assistant.error)
         
     # File uploader
-    uploaded_files = st.file_uploader(f"Fayl yuklash (Rasmlar, PDF hujjatlar yoki Audio)", 
+    uploaded_files = st.file_uploader(f"Fayl yuklash (Faqat rasmlar: PNG, JPG)", 
+                                      type=['png', 'jpg', 'jpeg', 'webp'],
                                       accept_multiple_files=True,
                                       key="uploader")
                                       
@@ -58,8 +59,7 @@ def render_chat():
                  
         # Assistant response
         with st.chat_message("model"):
-            chat_session = assistant.get_chat_session(st.session_state.history[:-1])
-            stream = assistant.send_message_stream(chat_session, prompt, files=uploaded_files)
+            stream = assistant.send_message_stream(st.session_state.history[:-1], prompt, files=uploaded_files)
             response = st.write_stream(stream)
             
         st.session_state.history.append({"role": "model", "parts": [response]})
